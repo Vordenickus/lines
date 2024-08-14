@@ -22,9 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	 * Каркас
 	 */
 	const lines = {
-		left: [[300, 300], [0, 1000]],
-		right: [[700, 300],[1000, 1000]],
-		up: [[700, 300],[300, 300]],
+		left: [[300, 0], [0, 1000]],
+		right: [[700, 0],[1000, 1000]],
+		up: [[700, 0],[300, 0]],
 		down: [[1000, 1000], [0, 1000]],
 	}
 	
@@ -35,22 +35,64 @@ document.addEventListener('DOMContentLoaded', () => {
 	 */
 	const startMoveValues = [
 		{
-			left: [262.5, 387.5],
-			right: [737.5, 387.5],
+			left: [262.5, 125],
+			right: [737.5, 125],
 		},
 		{
-			left: [200, 533.3333333333334],
-			right: [800, 533.3333333333334],
+			left: [200, 333.3333333333333],
+			right: [800, 333.3333333333333],
 		},
 		{
-			left: [112.5, 737.5],
-			right: [887.5, 737.5],
+			left: [112.5, 625],
+			right: [887.5, 625],
 		},
 		{
 			left: [0, 1000],
 			right: [1000, 1000],
 		},
 	];
+
+	const precalculatePoints = (start, end, segments) => {
+		const xDelta = (end[0] - start[0]) / segments;
+		const yDelta = (end[1] - start[1]) / segments;
+
+		const points = [];
+
+		for (let i = 1; i <= segments; i++) {
+			points.push([start[0] + i * xDelta, start[1] + i * yDelta]);
+		}
+
+		return points.reverse();
+	};
+
+lines.left_route = precalculatePoints(lines.left[0], lines.left[1], 9000);
+lines.right_route = precalculatePoints(lines.right[0], lines.right[1], 9000);
+const routeLimit = Math.min(lines.left_route.length, lines.right_route.length);
+
+let indexes = [
+	Math.floor(routeLimit / 8) * 7,
+	Math.floor(routeLimit / 6) * 4,
+	Math.floor(routeLimit / 8) * 3,
+	0,
+];
+
+const startPoints = [
+	indexes[0],
+	indexes[1],
+	indexes[2],
+	indexes[3]
+];
+
+const f = Math.floor(routeLimit / 8) * 3;
+
+console.log([lines.left_route[f], lines.right_route[f]]);
+
+const endPoints = [
+	routeLimit,
+	indexes[0],
+	indexes[1],
+	indexes[2],
+];
 	
 	let current = [
 		{
@@ -73,8 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	const endMoveValues = [
 		{
-			left: [300, 300],
-			right:  [700, 300],
+			left: [300, 0],
+			right:  [700, 0],
 		},
 		{
 			left: [startMoveValues[0].left[0], startMoveValues[0].left[1]],
