@@ -8,29 +8,21 @@
 </head>
 <body>
 	<style>
+		#road {
+			z-index: 100;
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			height: 70vh;
+		}
+
 		body {
+			width: 100%;
+			height: 100%;
 			background: black;
 		}
-
-		#road {
-			perspective: 1000px;
-			transform: rotateX(20deg);
-		}
-
-		#road .row {
-			display: flex;
-			width: 1000px;
-			height: 333px;
-		}
-
-		#road .cell {
-			border: 1px solid yellow;
-			display: block;
-			height: 333px;
-			width: 333px;
-		}
 	</style>
-
 	<canvas id="road" width="1000" height="1000"></canvas>
 </body>
 </html>
