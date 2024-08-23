@@ -1,17 +1,31 @@
 const FRACTION = 220;
 /**
  * Тротлим анимацию на 60 кадров в секунду
- * 
+ *
  * Дельта не используется, поэтому если кадров будет меньше ничего хорошего не будет
  */
 const TARGET_FPS = 60;
 const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
 
-const CARCASS_COLOR = '#ff0';
+/**
+ * Настройки рендера каркаса трапеции
+ */
+const CARCASS_COLOR = '#FFF281';
 const CARCASS_LINE_WIDTH = 2;
 
-const LINES_COLOR = '#ff0';
-const LINES_LINE_WIDTH = 2;
+/**
+ * Настройки рендера двигающихся линий
+ */
+const LINES_COLOR = '#FFF281';
+const LINES_LINE_WIDTH = 4;
+
+/**
+ * Фактор компенсации ширины верхней линии каркаса
+ */
+const TOP_LINE_WIDTH_COMPENSATION_FACTOR = 2;
+
+const CANVAS_BASE_WIDTH = 1920;
+const CANVAS_BASE_HEIGHT = 1080;
 
 document.addEventListener('DOMContentLoaded', () => {
 	const canvas = document.querySelector('#road');
@@ -21,13 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
 	 * Каркас
 	 */
 	const lines = {
-		left: [[300, 0], [0, 1000]],
-		right: [[700, 0],[1000, 1000]],
-		first_middle: [[300 + 133.3333333, 0], [333.333333, 1000]],
-		second_middle: [[300 + 266.66666, 0], [666.666666, 1000]],
-		up: [[300, 0],[700, 0]],
-		down: [[0, 1000], [1000, 1000]],
+		left: [[795, 0], [0, CANVAS_BASE_HEIGHT]],
+		right: [[1125, 0],[CANVAS_BASE_WIDTH, CANVAS_BASE_HEIGHT]],
+		up: [[795, 0],[1125, 0]],
+		down: [[0, CANVAS_BASE_WIDTH], [CANVAS_BASE_WIDTH, CANVAS_BASE_HEIGHT]],
 	}
+
+	lines.first_middle = [
+		[lines.up[0][0] + (Math.abs(lines.up[0][0] - lines.up[1][0]) / 3), 0],
+		[CANVAS_BASE_WIDTH / 3, CANVAS_BASE_HEIGHT]
+	];
+	lines.second_middle = [
+		[lines.up[0][0] + ((Math.abs(lines.up[0][0] - lines.up[1][0]) / 3) * 2), 0],
+		[(CANVAS_BASE_WIDTH / 3) * 2, CANVAS_BASE_HEIGHT]
+	];
+
+	// BASE: 3040 ASPECT = 0.17 BASE 330
+	// TOP: 521
 
 	const precalculatePoints = (start, end, segments) => {
 		const xDelta = (end[0] - start[0]) / segments;
@@ -47,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	lines.first_middle_route = precalculatePoints(lines.first_middle[0], lines.first_middle[1], 9000);
 	lines.second_middle_route = precalculatePoints(lines.second_middle[0], lines.second_middle[1], 9000);
 	const routeLimit = Math.min(lines.left_route.length, lines.right_route.length);
-	
+
 	const startMoveValues = [
 		{
 			left: lines.left_route[Math.floor(routeLimit / 8) * 7],
@@ -87,11 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
 			right: [startMoveValues[3].right[0], startMoveValues[3].right[1]],
 		},
 	];
-	
+
 	const endMoveValues = [
 		{
-			left: [300, 0],
-			right:  [700, 0],
+			left: lines.up[0],
+			right: lines.up[1],
 		},
 		{
 			left: [startMoveValues[0].left[0], startMoveValues[0].left[1]],
@@ -106,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			right: [startMoveValues[2].right[0], startMoveValues[2].right[1]],
 		}
 	];
-	
+
 	const deltas = [
 		{
 			left: {
@@ -149,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		},
 	];
-	
+
 	const steps = [
 		{
 			left: {
@@ -201,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const HIDING_STATE = 'hiding';
 	const STOPED_STATE = 'stoped';
 
-	let animationState = window.scrollY < 200 ? LOADING_STATE : HIDING_STATE;
+	let animationState = HIDING_STATE;
 
 	const animationManager = () => {
 		if (lastFrame > 0 && performance.now() - lastFrame < TARGET_FRAME_TIME) {
@@ -209,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			return;
 		}
 		switch (animationState) {
-			case PLAYING_STATE: 
+			case PLAYING_STATE:
 				playingAnimation();
 				break;
 			case LOADING_STATE:
@@ -220,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				break;
 			default:
 			case STOPED_STATE:
-				context.clearRect(0, 0, 1000, 1000);
+				context.clearRect(0, 0, 1920, 1080);
 				break;
 		}
 
@@ -233,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	let loadingIndex = 0;
 
 	const hideAnimation = () => {
-		context.clearRect(0, 0, 1000, 1000);
+		context.clearRect(0, 0, 1920, 1080);
 		if (currentLoading.length === 0) {
 			return;
 		}
@@ -254,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				const key = entry[0];
 				const value = entry[1];
-	
+
 				if (['left', 'right', 'up', 'down', 'first_middle', 'second_middle'].includes(key)) {
 					if (value[0] !== 0 && value[1] !== 0) {
 						context.moveTo(lastLoading[key][0], lastLoading[key][1]);
@@ -299,12 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			canvas.dispatchEvent(new CustomEvent('hide_stoped'));
 		}
 	}
-	
+
 	const loadingAnimation = () => {
-		context.clearRect(0, 0, 1000, 1000);
-		document.body.style.position = 'fixed';
-		document.body.style.overflowY = 'scroll';
-		document.body.style.width = '100%';
+		context.clearRect(0, 0, 1920, 1080);
 
 		context.beginPath();
 		context.strokeStyle = '#FF0';
@@ -322,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 				const key = entry[0];
 				const value = entry[1];
-	
+
 				if (['left', 'right', 'up', 'down', 'first_middle', 'second_middle'].includes(key)) {
 					if (value[0] !== 0 && value[1] !== 0) {
 						context.moveTo(lastLoading[key][0], lastLoading[key][1]);
@@ -354,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (loadingIndex >= routeLimit) {
 			loadingIndex = routeLimit - 1;
 		}
-		
+
 		context.stroke();
 
 		for (let i = 0; i < 3; i++) {
@@ -372,9 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		if (loadingIndex >= routeLimit) {
 			animationState = PLAYING_STATE;
-			document.body.style.position = '';
-			document.body.style.overflowY = '';
-			document.body.style.width = '%';
 			canvas.dispatchEvent(new CustomEvent('loading_stoped'));
 		}
 	}
@@ -383,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	 * цикл анимации
 	 */
 	const playingAnimation = () => {
-		context.clearRect(0,0, 1000, 1000);
+		context.clearRect(0,0, 1920, 1080);
 
 		context.beginPath();
 		context.strokeStyle = CARCASS_COLOR;
@@ -394,11 +412,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			const key = entry[0];
 			const value = entry[1];
 
-			if (['left', 'right', 'up', 'down', 'first_middle', 'second_middle'].includes(key)) {
-				context.moveTo(value[0][0], value[0][1]);
-				context.lineTo(value[1][0], value[1][1]);
+			if (['left', 'right', 'down', 'first_middle', 'second_middle'].includes(key)) {
+				context.moveTo(value[0][0] + 0.5, value[0][1] + 0.5);
+				context.lineTo(value[1][0] + 0.5, value[1][1] + 0.5);
 			}
 		});
+
+		context.stroke();
+
+		/**
+		 * Компенсируем размер верхней линии изза перспективы
+		 */
+		context.beginPath();
+		context.lineWidth = CARCASS_LINE_WIDTH * TOP_LINE_WIDTH_COMPENSATION_FACTOR;
+		context.strokeStyle = CARCASS_COLOR;
+
+		context.moveTo(lines['up'][0][0], lines['up'][0][1]);
+		context.lineTo(lines['up'][1][0], lines['up'][1][1]);
+
 		context.stroke();
 		/**
 		 * рисуем анимированные линии
@@ -447,36 +478,71 @@ document.addEventListener('DOMContentLoaded', () => {
 	let loadReversed = false;
 
 	window.addEventListener('scroll', (event) => {
-		if (window.scrollY > 0 && animationState === PLAYING_STATE) {
-			animationState = HIDING_STATE;
-			if (!hideReversed) {
-				currentLoading.reverse();
-				hideReversed = true;
-				loadReversed = false;
-			}
-
-		}
-
-		if (window.scrollY === 0) {
-			const callback = () => {
+		const animationWrapper = canvas.parentElement.parentElement;
+		canvas.parentElement.style.height="inherit";
+		if (
+			animationWrapper.style.position === 'fixed'
+			&&
+			(
+				animationState === HIDING_STATE
+				||
+				animationState === STOPED_STATE
+			)
+		) {
 				animationState = LOADING_STATE;
 				if (!loadReversed) {
 					currentLoading.reverse();
 					loadReversed = true;
 					hideReversed = false;
 				}
-			}
-
-			if (animationState === HIDING_STATE) {
-				canvas.addEventListener('hide_stoped', () => {
-					if (window.scrollY === 0) {
-						callback();
-					}
-					canvas.removeEventListener('hide_stoped', callback);
-				});
-			} else {
-				callback();
-			}
 		}
-	}, {passive: false});
+
+		if (
+			animationWrapper.style.position !== 'fixed'
+			&&
+			animationState === PLAYING_STATE
+		) {
+			//animationState = HIDING_STATE;
+			//if (!hideReversed) {
+				//currentLoading.reverse();
+				//hideReversed = true;
+				//loadReversed = false;
+			//}
+		}
+	});
+
+	// window.addEventListener('scroll', (event) => {
+	// 		return;
+	// 	if (window.scrollY > 0 && animationState === PLAYING_STATE) {
+	// 		animationState = HIDING_STATE;
+	// 		if (!hideReversed) {
+	// 			currentLoading.reverse();
+	// 			hideReversed = true;
+	// 			loadReversed = false;
+	// 		}
+
+	// 	}
+
+	// 	if (window.scrollY === 0) {
+	// 		const callback = () => {
+	// 			animationState = LOADING_STATE;
+	// 			if (!loadReversed) {
+	// 				currentLoading.reverse();
+	// 				loadReversed = true;
+	// 				hideReversed = false;
+	// 			}
+	// 		}
+
+	// 		if (animationState === HIDING_STATE) {
+	// 			canvas.addEventListener('hide_stoped', () => {
+	// 				if (window.scrollY === 0) {
+	// 					callback();
+	// 				}
+	// 				canvas.removeEventListener('hide_stoped', callback);
+	// 			});
+	// 		} else {
+	// 			callback();
+	// 		}
+	// 	}
+	// });
 });
